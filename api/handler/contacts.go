@@ -20,7 +20,7 @@ func (h *Contacts) Register(api huma.API) {
 	huma.Delete(api, "/{id}", h.del)
 }
 
-type contactView struct {
+type ContactModel struct {
 	ID        int    `json:"id" example:"12" readOnly:"true"`
 	Firstname string `json:"firstname" example:"john"`
 	Lastname  string `json:"lastname" example:"smith"`
@@ -28,7 +28,7 @@ type contactView struct {
 }
 
 type ContactsListOutput struct {
-	Body []contactView
+	Body []ContactModel
 }
 
 func (h *Contacts) list(ctx context.Context, _ *struct{}) (*ContactsListOutput, error) {
@@ -37,9 +37,9 @@ func (h *Contacts) list(ctx context.Context, _ *struct{}) (*ContactsListOutput, 
 		return nil, err
 	}
 
-	body := make([]contactView, 0, len(contacts))
+	body := make([]ContactModel, 0, len(contacts))
 	for _, contact := range contacts {
-		body = append(body, contactView{
+		body = append(body, ContactModel{
 			ID:        contact.ID,
 			Firstname: contact.Firstname,
 			Lastname:  contact.Lastname,
@@ -51,7 +51,7 @@ func (h *Contacts) list(ctx context.Context, _ *struct{}) (*ContactsListOutput, 
 }
 
 type ContactsGetOutput struct {
-	Body contactView
+	Body ContactModel
 }
 
 func (h *Contacts) get(ctx context.Context, input *struct {
@@ -62,7 +62,7 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 	case store.ErrObjectNotFound:
 		return nil, huma.Error404NotFound("", err)
 	case nil:
-		return &ContactsGetOutput{Body: contactView{
+		return &ContactsGetOutput{Body: ContactModel{
 			ID:        contact.ID,
 			Firstname: contact.Firstname,
 			Lastname:  contact.Lastname,
@@ -75,7 +75,7 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 
 func (h *Contacts) put(ctx context.Context, input *struct {
 	ID   int `path:"id" example:"12" doc:"ID of the contact to put"`
-	Body contactView
+	Body ContactModel
 }) (*struct{}, error) {
 	birthday, err := time.Parse(time.DateOnly, input.Body.Birthday)
 	if err != nil {
