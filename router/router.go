@@ -11,7 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )
 
-var buckets = []float64{.001, .003, .006, .01, .03, .06, .1, .3, .6, 1}
+var buckets = metrics.ExponentialBuckets(1e-3, 5, 6)
 
 func New(title, version string, readiness http.HandlerFunc, opts ...func(huma.API)) http.Handler {
 	mux := http.NewServeMux()
