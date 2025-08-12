@@ -13,7 +13,7 @@ import (
 
 var buckets = []float64{.001, .003, .006, .01, .03, .06, .1, .3, .6, 1}
 
-func New(title, version string, readiness http.HandlerFunc, handlers ...interface{ Register(huma.API) }) http.Handler {
+func New(title, version string, readiness http.HandlerFunc, opts ...func(huma.API)) http.Handler {
 	mux := http.NewServeMux()
 	set := metrics.NewSet()
 
@@ -36,8 +36,8 @@ func New(title, version string, readiness http.HandlerFunc, handlers ...interfac
 			slog.Info(fmt.Sprintln(op.Method, op.Path, "from", ctx.RemoteAddr(), ctx.Status(), time.Since(start)))
 		},
 	)
-	for _, h := range handlers {
-		h.Register(api)
+	for _, opt := range opts {
+		opt(api)
 	}
 
 	return mux

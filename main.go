@@ -25,8 +25,8 @@ func main() {
 			Addr: fmt.Sprintf(":%d", options.Port),
 			Handler: router.New("My API", "1.0.0",
 				func(w http.ResponseWriter, r *http.Request) {},
-				&handler.Greeting{},
-				&handler.Contacts{Store: &store.ContactsInmem{}},
+				(&handler.Greeting{}).Register,
+				(&handler.Contacts{Store: new(store.ContactsInmem)}).Register,
 			),
 			ReadHeaderTimeout: 15 * time.Second,
 		}
