@@ -3,7 +3,6 @@ package router
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -14,7 +13,13 @@ import (
 
 var buckets = metrics.ExponentialBuckets(1e-3, 5, 6)
 
-func New(title, version string, readiness http.HandlerFunc, writeMetrics func(io.Writer), opts ...func(huma.API)) http.Handler {
+func New(
+	title, version string,
+	readiness http.HandlerFunc,
+	writeMetrics func(io.Writer),
+	logWriter io.Writer,
+	opts ...func(huma.API),
+) http.Handler {
 	set := metrics.NewSet()
 	set.RegisterMetricsWriter(writeMetrics)
 
@@ -27,12 +32,12 @@ func New(title, version string, readiness http.HandlerFunc, writeMetrics func(io
 	api := huma.NewGroup(root, "/api")
 	api.UseMiddleware(
 		func(ctx huma.Context, next func(huma.Context)) {
-			op, start := ctx.Operation(), time.Now()
+			proto, op, start := ctx.Version().Proto, ctx.Operation(), time.Now()
 			next(ctx)
 			labels := fmt.Sprintf(`{method="%s",path="%s",status="%d"}`, op.Method, op.Path, ctx.Status())
 			set.GetOrCreatePrometheusHistogramExt(`http_request_duration_seconds`+labels, buckets).UpdateDuration(start)
 			set.GetOrCreateCounter(`http_requests_total` + labels).Inc()
-			slog.Info(fmt.Sprintln(op.Method, op.Path, "from", ctx.RemoteAddr(), ctx.Status(), time.Since(start)))
+			fmt.Fprintln(logWriter, proto, op.Method, op.Path, ctx.RemoteAddr(), ctx.Header("User-Agent"), ctx.Status(), time.Since(start))
 		},
 	)
 	for _, opt := range opts {
