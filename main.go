@@ -9,9 +9,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humacli"
 
-	"github.com/oaiiae/huma-rest-example/api/handler"
-	"github.com/oaiiae/huma-rest-example/api/router"
-	"github.com/oaiiae/huma-rest-example/api/store"
+	"github.com/oaiiae/huma-rest-example/handler"
+	"github.com/oaiiae/huma-rest-example/router"
+	"github.com/oaiiae/huma-rest-example/store"
 )
 
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.

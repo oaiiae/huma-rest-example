@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/oaiiae/huma-rest-example/api/store"
+	"github.com/oaiiae/huma-rest-example/store"
 )
 
 type Contacts struct {
