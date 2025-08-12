@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -13,16 +14,14 @@ import (
 
 var buckets = metrics.ExponentialBuckets(1e-3, 5, 6)
 
-func New(title, version string, readiness http.HandlerFunc, opts ...func(huma.API)) http.Handler {
-	mux := http.NewServeMux()
+func New(title, version string, readiness http.HandlerFunc, writeMetrics func(io.Writer), opts ...func(huma.API)) http.Handler {
 	set := metrics.NewSet()
+	set.RegisterMetricsWriter(writeMetrics)
 
+	mux := http.NewServeMux()
 	mux.HandleFunc("/liveness", func(http.ResponseWriter, *http.Request) {})
 	mux.HandleFunc("/readiness", readiness)
-	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) {
-		set.WritePrometheus(w)
-		metrics.WriteProcessMetrics(w)
-	})
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) { set.WritePrometheus(w) })
 
 	root := humago.New(mux, huma.DefaultConfig(title, version))
 	api := huma.NewGroup(root, "/api")

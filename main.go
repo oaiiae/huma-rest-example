@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/danielgtaylor/huma/v2/humacli"
 
 	"github.com/oaiiae/huma-rest-example/handler"
@@ -25,6 +26,7 @@ func main() {
 			Addr: fmt.Sprintf(":%d", options.Port),
 			Handler: router.New("My API", "1.0.0",
 				func(w http.ResponseWriter, r *http.Request) {},
+				metrics.WriteProcessMetrics,
 				(&handler.Greeting{}).Register,
 				(&handler.Contacts{Store: new(store.ContactsInmem)}).Register,
 			),
