@@ -17,7 +17,6 @@ func New(
 	title, version string,
 	readiness http.HandlerFunc,
 	writeMetrics func(io.Writer),
-	logWriter io.Writer,
 	opts ...func(huma.API),
 ) http.Handler {
 	set := metrics.NewSet()
@@ -32,12 +31,11 @@ func New(
 	api := huma.NewGroup(root, "/api")
 	api.UseMiddleware(
 		func(ctx huma.Context, next func(huma.Context)) {
-			proto, op, start := ctx.Version().Proto, ctx.Operation(), time.Now()
+			op, start := ctx.Operation(), time.Now()
 			next(ctx)
 			labels := fmt.Sprintf(`{method="%s",path="%s",status="%d"}`, op.Method, op.Path, ctx.Status())
 			set.GetOrCreatePrometheusHistogramExt(`http_request_duration_seconds`+labels, buckets).UpdateDuration(start)
 			set.GetOrCreateCounter(`http_requests_total` + labels).Inc()
-			fmt.Fprintln(logWriter, proto, op.Method, op.Path, ctx.RemoteAddr(), ctx.Header("User-Agent"), ctx.Status(), time.Since(start))
 		},
 	)
 	for _, opt := range opts {
@@ -45,4 +43,8 @@ func New(
 	}
 
 	return mux
+}
+
+func OptUseMiddleware(middlewares ...func(huma.Context, func(huma.Context))) func(huma.API) {
+	return func(api huma.API) { api.UseMiddleware(middlewares...) }
 }

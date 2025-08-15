@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humacli"
 
 	"github.com/oaiiae/huma-rest-example/handler"
@@ -30,7 +30,7 @@ func main() {
 			Handler: router.New("My API", "1.0.0",
 				func(w http.ResponseWriter, r *http.Request) {},
 				metrics.WriteProcessMetrics,
-				slogWriter{logger.With("tag", "api")},
+				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
 				(&handler.Greeting{}).Register,
 				(&handler.Contacts{Store: new(store.ContactsInmem)}).Register,
 			),
@@ -56,10 +56,15 @@ func main() {
 	cli.Run()
 }
 
-type slogWriter struct{ *slog.Logger }
-
-func (sw slogWriter) Write(p []byte) (int, error) {
-	p = bytes.TrimSpace(p)
-	sw.Log(context.Background(), slog.LevelInfo, string(p))
-	return len(p), nil
+func accesslog(l *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		next(ctx)
+		l.LogAttrs(context.Background(), level,
+			ctx.Operation().Method+" "+ctx.Operation().Path+" "+ctx.Version().Proto,
+			slog.String("from", ctx.RemoteAddr()),
+			slog.Int("status", ctx.Status()),
+			slog.String("ref", ctx.Header("Referer")),
+			slog.String("ua", ctx.Header("User-Agent")),
+		)
+	}
 }
