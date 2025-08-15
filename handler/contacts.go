@@ -13,7 +13,6 @@ type Contacts struct {
 }
 
 func (h *Contacts) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
-	api = huma.NewGroup(api, "/contacts")
 	huma.Get(api, "/", h.list)
 	huma.Get(api, "/{id}", h.get)
 	huma.Put(api, "/{id}", h.put)

@@ -10,7 +10,7 @@ import (
 type Greeting struct{}
 
 func (h *Greeting) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
-	huma.Get(api, "/greeting/{name}", h.handle)
+	huma.Get(api, "/{name}", h.handle)
 }
 
 // GreetingOutput represents the greeting operation response.

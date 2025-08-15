@@ -31,8 +31,10 @@ func main() {
 				func(w http.ResponseWriter, r *http.Request) {},
 				metrics.WriteProcessMetrics,
 				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
-				router.OptAutoRegister(&handler.Greeting{}),
-				router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)}),
+				router.OptGroup("/api",
+					router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
+					router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)})),
+				),
 			),
 			ReadHeaderTimeout: 15 * time.Second,
 		}

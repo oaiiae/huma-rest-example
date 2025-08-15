@@ -27,8 +27,7 @@ func New(
 	mux.HandleFunc("/readiness", readiness)
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) { set.WritePrometheus(w) })
 
-	root := humago.New(mux, huma.DefaultConfig(title, version))
-	api := huma.NewGroup(root, "/api")
+	api := humago.New(mux, huma.DefaultConfig(title, version))
 	api.UseMiddleware(
 		func(ctx huma.Context, next func(huma.Context)) {
 			op, start := ctx.Operation(), time.Now()
@@ -51,4 +50,19 @@ func OptUseMiddleware(middlewares ...func(huma.Context, func(huma.Context))) fun
 
 func OptAutoRegister(server any) func(huma.API) {
 	return func(api huma.API) { huma.AutoRegister(api, server) }
+}
+
+type Prefixes []string
+
+func (p Prefixes) OptGroup(opts ...func(huma.API)) func(huma.API) {
+	return func(api huma.API) {
+		g := huma.NewGroup(api, p...)
+		for _, opt := range opts {
+			opt(g)
+		}
+	}
+}
+
+func OptGroup(prefix string, opts ...func(huma.API)) func(huma.API) {
+	return Prefixes{prefix}.OptGroup(opts...)
 }
