@@ -48,3 +48,7 @@ func New(
 func OptUseMiddleware(middlewares ...func(huma.Context, func(huma.Context))) func(huma.API) {
 	return func(api huma.API) { api.UseMiddleware(middlewares...) }
 }
+
+func OptAutoRegister(server any) func(huma.API) {
+	return func(api huma.API) { huma.AutoRegister(api, server) }
+}

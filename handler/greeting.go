@@ -9,7 +9,7 @@ import (
 
 type Greeting struct{}
 
-func (h *Greeting) Register(api huma.API) {
+func (h *Greeting) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
 	huma.Get(api, "/greeting/{name}", h.handle)
 }
 

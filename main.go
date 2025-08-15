@@ -31,8 +31,8 @@ func main() {
 				func(w http.ResponseWriter, r *http.Request) {},
 				metrics.WriteProcessMetrics,
 				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
-				(&handler.Greeting{}).Register,
-				(&handler.Contacts{Store: new(store.ContactsInmem)}).Register,
+				router.OptAutoRegister(&handler.Greeting{}),
+				router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)}),
 			),
 			ReadHeaderTimeout: 15 * time.Second,
 		}

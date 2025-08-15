@@ -12,7 +12,7 @@ type Contacts struct {
 	Store store.ContactsStore
 }
 
-func (h *Contacts) Register(api huma.API) {
+func (h *Contacts) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
 	api = huma.NewGroup(api, "/contacts")
 	huma.Get(api, "/", h.list)
 	huma.Get(api, "/{id}", h.get)
