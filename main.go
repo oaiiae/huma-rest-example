@@ -41,9 +41,9 @@ func main() {
 		hooks.OnStart(func() {
 			err := server.ListenAndServe()
 			if err != http.ErrServerClosed {
-				slog.Error("failed to listen and serve", "err", err)
+				logger.Error("failed to listen and serve", "err", err)
 			} else {
-				slog.Info("server closed")
+				logger.Info("server closed")
 			}
 		})
 		hooks.OnStop(func() {
@@ -51,7 +51,7 @@ func main() {
 			defer cancel()
 			err := server.Shutdown(ctx)
 			if err != nil {
-				slog.Warn("could not shutdown the server", "err", err)
+				logger.Warn("could not shutdown the server", "err", err)
 			}
 		})
 	})
