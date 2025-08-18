@@ -17,6 +17,13 @@ import (
 	"github.com/oaiiae/huma-rest-example/store"
 )
 
+// Information set at build time.
+var (
+	BuildName    = "huma-rest-example"
+	BuildVersion = "dev"
+	BuildDate    = ""
+)
+
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
 type Options struct {
 	Port int `help:"Port to listen on" short:"p" default:"8888"`
@@ -27,7 +34,7 @@ func main() {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		server := http.Server{
 			Addr: fmt.Sprintf(":%d", options.Port),
-			Handler: router.New("My API", "1.0.0",
+			Handler: router.New(BuildName, BuildVersion,
 				func(w http.ResponseWriter, r *http.Request) {},
 				metrics.WriteProcessMetrics,
 				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
@@ -39,9 +46,10 @@ func main() {
 			ReadHeaderTimeout: 15 * time.Second,
 		}
 		hooks.OnStart(func() {
+			logger.Info("server starts", slog.Group("build", "name", BuildName, "version", BuildVersion, "date", BuildDate))
 			err := server.ListenAndServe()
 			if err != http.ErrServerClosed {
-				logger.Error("failed to listen and serve", "err", err)
+				logger.Error("server failure", "err", err)
 			} else {
 				logger.Info("server closed")
 			}

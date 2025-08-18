@@ -1,14 +1,21 @@
 FROM golang AS build
 
+ARG BUILD_NAME=huma-rest-example
+ARG BUILD_VERSION=dev
+ARG BUILD_DATE=""
+
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+
 WORKDIR /app
 COPY go.sum go.mod vendor/ ./
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -o huma-rest-example-server -ldflags "-s -w"
+RUN go build -o bin/${BUILD_NAME} -ldflags "-s -w -X main.BuildName=${BUILD_NAME} -X main.BuildVersion=${BUILD_VERSION} -X main.BuildDate=${BUILD_DATE}"
+RUN cd bin && ln -s ${BUILD_NAME} entrypoint
 
 # ---
 
 FROM scratch
-
-COPY --from=build /app/huma-rest-example-server /
-ENTRYPOINT [ "/huma-rest-example-server" ]
+COPY --from=build /app/bin /
+ENTRYPOINT [ "/entrypoint" ]
