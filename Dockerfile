@@ -16,6 +16,6 @@ RUN cd bin && ln -s ${BUILD_NAME} entrypoint
 
 # ---
 
-FROM scratch
+FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /app/bin /
 ENTRYPOINT [ "/entrypoint" ]
