@@ -53,7 +53,7 @@ func main() {
 			ReadHeaderTimeout: 15 * time.Second,
 		}
 		hooks.OnStart(func() {
-			logger.Info("server starts", "title", title, "version", version, "revision", revision, "created", created)
+			logger.Info("starting", "title", title, "version", version, "revision", revision, "created", created)
 			err := server.ListenAndServe()
 			if err != http.ErrServerClosed {
 				logger.Error("server failure", "err", err)
