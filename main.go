@@ -39,18 +39,19 @@ type Options struct {
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		server := http.Server{
-			Addr: fmt.Sprintf(":%d", options.Port),
-			Handler: router.New(title, version,
-				func(w http.ResponseWriter, r *http.Request) {},
-				router.MetricsWriters(buildinfoMetricWriter(), metrics.WriteProcessMetrics),
-				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
-				router.OptGroup("/api",
-					router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
-					router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)})),
-				),
+		router := router.New(title, version,
+			func(w http.ResponseWriter, r *http.Request) {},
+			router.MetricsWriters(buildinfoMetricWriter(), metrics.WriteProcessMetrics),
+			router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
+			router.OptGroup("/api",
+				router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
+				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)})),
 			),
+		)
+		server := http.Server{
+			Addr:              fmt.Sprintf(":%d", options.Port),
 			ReadHeaderTimeout: 15 * time.Second,
+			Handler:           router,
 		}
 		hooks.OnStart(func() {
 			logger.Info("starting", "title", title, "version", version, "revision", revision, "created", created)
