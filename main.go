@@ -27,8 +27,8 @@ var (
 )
 
 func buildinfoMetricWriter() func(io.Writer) {
-	metric := fmt.Sprintf("build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
-	return func(w io.Writer) { w.Write([]byte(metric)) }
+	b := fmt.Appendf(nil, "build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
+	return func(w io.Writer) { w.Write(b) }
 }
 
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
