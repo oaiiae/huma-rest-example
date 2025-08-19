@@ -43,7 +43,7 @@ func main() {
 			Addr: fmt.Sprintf(":%d", options.Port),
 			Handler: router.New(title, version,
 				func(w http.ResponseWriter, r *http.Request) {},
-				router.MetricsWriters(metrics.WriteProcessMetrics, buildinfoMetricWriter()),
+				router.MetricsWriters(buildinfoMetricWriter(), metrics.WriteProcessMetrics),
 				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
 				router.OptGroup("/api",
 					router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
