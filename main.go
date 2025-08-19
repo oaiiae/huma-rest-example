@@ -19,9 +19,10 @@ import (
 
 // Information set at build time.
 var (
-	BuildName    = "huma-rest-example"
-	BuildVersion = "dev"
-	BuildDate    = ""
+	title    string
+	version  string
+	revision string
+	created  string
 )
 
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
@@ -34,7 +35,7 @@ func main() {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		server := http.Server{
 			Addr: fmt.Sprintf(":%d", options.Port),
-			Handler: router.New(BuildName, BuildVersion,
+			Handler: router.New(title, version,
 				func(w http.ResponseWriter, r *http.Request) {},
 				metrics.WriteProcessMetrics,
 				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
@@ -46,7 +47,7 @@ func main() {
 			ReadHeaderTimeout: 15 * time.Second,
 		}
 		hooks.OnStart(func() {
-			logger.Info("server starts", slog.Group("build", "name", BuildName, "version", BuildVersion, "date", BuildDate))
+			logger.Info("server starts", "title", title, "version", version, "revision", revision, "created", created)
 			err := server.ListenAndServe()
 			if err != http.ErrServerClosed {
 				logger.Error("server failure", "err", err)

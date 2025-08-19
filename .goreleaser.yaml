@@ -9,9 +9,10 @@ builds:
       - windows
     ldflags:
       - -s -w
-      - -X main.BuildName={{ .ProjectName }}
-      - -X main.BuildVersion={{ .Version }}
-      - -X main.BuildDate={{ .Date }}
+      - -X main.title={{ .ProjectName }}
+      - -X main.version={{ .Version }}
+      - -X main.revision={{ .FullCommit }}
+      - -X main.created={{ .Date }}
 
 archives:
   - formats: [tar.gz]
@@ -34,10 +35,10 @@ dockers:
       - "oaiiae/{{ .ProjectName }}:{{ .Version }}"
     build_flag_templates:
       - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.created={{.Date}}"
     skip_push: "{{ .IsSnapshot }}"
 
 changelog:
