@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -25,6 +26,11 @@ var (
 	created  string
 )
 
+func buildinfoMetricWriter() func(io.Writer) {
+	metric := fmt.Sprintf(`build_info{title="%s",version="%s",revision="%s",created="%s"} 1`+"\n", title, version, revision, created)
+	return func(w io.Writer) { w.Write([]byte(metric)) }
+}
+
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
 type Options struct {
 	Port int `help:"Port to listen on" short:"p" default:"8888"`
@@ -37,7 +43,7 @@ func main() {
 			Addr: fmt.Sprintf(":%d", options.Port),
 			Handler: router.New(title, version,
 				func(w http.ResponseWriter, r *http.Request) {},
-				metrics.WriteProcessMetrics,
+				router.MetricsWriters(metrics.WriteProcessMetrics, buildinfoMetricWriter()),
 				router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
 				router.OptGroup("/api",
 					router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),

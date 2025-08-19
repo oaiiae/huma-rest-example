@@ -44,6 +44,14 @@ func New(
 	return mux
 }
 
+func MetricsWriters(writers ...func(io.Writer)) func(io.Writer) {
+	return func(w io.Writer) {
+		for _, writer := range writers {
+			writer(w)
+		}
+	}
+}
+
 func OptUseMiddleware(middlewares ...func(huma.Context, func(huma.Context))) func(huma.API) {
 	return func(api huma.API) { api.UseMiddleware(middlewares...) }
 }
