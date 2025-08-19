@@ -32,7 +32,7 @@ func New(
 		func(ctx huma.Context, next func(huma.Context)) {
 			op, start := ctx.Operation(), time.Now()
 			next(ctx)
-			labels := fmt.Sprintf(`{method="%s",path="%s",status="%d"}`, op.Method, op.Path, ctx.Status())
+			labels := fmt.Sprintf(`{method=%q,path=%q,status="%d"}`, op.Method, op.Path, ctx.Status())
 			set.GetOrCreatePrometheusHistogramExt(`http_request_duration_seconds`+labels, buckets).UpdateDuration(start)
 			set.GetOrCreateCounter(`http_requests_total` + labels).Inc()
 		},

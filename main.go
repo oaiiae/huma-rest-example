@@ -27,7 +27,7 @@ var (
 )
 
 func buildinfoMetricWriter() func(io.Writer) {
-	metric := fmt.Sprintf(`build_info{title="%s",version="%s",revision="%s",created="%s"} 1`+"\n", title, version, revision, created)
+	metric := fmt.Sprintf("build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
 	return func(w io.Writer) { w.Write([]byte(metric)) }
 }
 
