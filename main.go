@@ -20,12 +20,11 @@ import (
 
 // Information set at build time.
 var (
-	title    string
-	version  string
-	revision string
-	created  string
+	title    string //nolint: gochecknoglobals // set at build time
+	version  string //nolint: gochecknoglobals // set at build time
+	revision string //nolint: gochecknoglobals // set at build time
+	created  string //nolint: gochecknoglobals // set at build time
 )
-var buildinfoMetric = fmt.Sprintf("build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
 
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
 type Options struct {
@@ -35,10 +34,12 @@ type Options struct {
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		buildinfoMetric := fmt.Sprintf("build_info{title=%q,version=%q,revision=%q,created=%q} 1\n",
+			title, version, revision, created)
 		metriks := metrics.NewSet()
 		router := router.New(title, version,
-			func(w http.ResponseWriter, r *http.Request) {},
-			func(w http.ResponseWriter, r *http.Request) {
+			func(_ http.ResponseWriter, _ *http.Request) {},
+			func(w http.ResponseWriter, _ *http.Request) {
 				fmt.Fprint(w, buildinfoMetric)
 				metriks.WritePrometheus(w)
 				metrics.WriteProcessMetrics(w)
@@ -93,14 +94,13 @@ func accessLog(logger *slog.Logger, level slog.Level) func(huma.Context, func(hu
 
 func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 	type ref struct {
-		http_requests_total           *metrics.Counter
-		http_request_duration_seconds *metrics.PrometheusHistogram
+		total     *metrics.Counter
+		histogram *metrics.PrometheusHistogram
 	}
-
-	buckets := metrics.ExponentialBuckets(1e-3, 5, 6)
 
 	refs := sync.Map{}
 	refsMu := sync.Mutex{}
+	buckets := metrics.ExponentialBuckets(1e-3, 5, 6) //nolint: mnd // arbitrary
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		op, start := ctx.Operation(), time.Now()
@@ -121,7 +121,8 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 			}
 			refsMu.Unlock()
 		}
-		val.(ref).http_requests_total.Inc()
-		val.(ref).http_request_duration_seconds.UpdateDuration(start)
+		valref := val.(ref) //nolint: errcheck // always true
+		valref.total.Inc()
+		valref.histogram.UpdateDuration(start)
 	}
 }
