@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
@@ -25,10 +26,11 @@ var (
 	revision string
 	created  string
 )
+var WriteBuildinfoMetric = func(io.Writer) {}
 
-func buildinfoMetricWriter() func(io.Writer) {
+func init() {
 	b := fmt.Appendf(nil, "build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
-	return func(w io.Writer) { w.Write(b) }
+	WriteBuildinfoMetric = func(w io.Writer) { w.Write(b) }
 }
 
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
@@ -39,10 +41,18 @@ type Options struct {
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		metriks := metrics.NewSet()
 		router := router.New(title, version,
 			func(w http.ResponseWriter, r *http.Request) {},
-			router.MetricsWriters(buildinfoMetricWriter(), metrics.WriteProcessMetrics),
-			router.OptUseMiddleware(accesslog(logger, slog.LevelInfo)),
+			func(w http.ResponseWriter, r *http.Request) {
+				WriteBuildinfoMetric(w)
+				metriks.WritePrometheus(w)
+				metrics.WriteProcessMetrics(w)
+			},
+			router.OptUseMiddleware(
+				accessLog(logger, slog.LevelInfo),
+				meterRequests(metriks),
+			),
 			router.OptGroup("/api",
 				router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
 				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)})),
@@ -74,15 +84,50 @@ func main() {
 	cli.Run()
 }
 
-func accesslog(l *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
+func accessLog(logger *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		next(ctx)
-		l.LogAttrs(context.Background(), level,
+		logger.LogAttrs(context.Background(), level,
 			ctx.Operation().Method+" "+ctx.Operation().Path+" "+ctx.Version().Proto,
 			slog.String("from", ctx.RemoteAddr()),
 			slog.Int("status", ctx.Status()),
 			slog.String("ref", ctx.Header("Referer")),
 			slog.String("ua", ctx.Header("User-Agent")),
 		)
+	}
+}
+
+func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
+	type ref struct {
+		http_requests_total           *metrics.Counter
+		http_request_duration_seconds *metrics.PrometheusHistogram
+	}
+
+	buckets := metrics.ExponentialBuckets(1e-3, 5, 6)
+
+	refs := sync.Map{}
+	refsMu := sync.Mutex{}
+
+	return func(ctx huma.Context, next func(huma.Context)) {
+		op, start := ctx.Operation(), time.Now()
+		next(ctx)
+
+		key := op.OperationID + http.StatusText(ctx.Status())
+		val, ok := refs.Load(key)
+		if !ok {
+			refsMu.Lock()
+			val, ok = refs.Load(key)
+			if !ok {
+				labels := fmt.Sprintf(`{method=%q,path=%q,status="%d"}`, op.Method, op.Path, ctx.Status())
+				val = ref{
+					set.NewCounter("http_requests_total" + labels),
+					set.NewPrometheusHistogramExt("http_request_duration_seconds"+labels, buckets),
+				}
+				refs.Store(key, val)
+			}
+			refsMu.Unlock()
+		}
+		val.(ref).http_requests_total.Inc()
+		val.(ref).http_request_duration_seconds.UpdateDuration(start)
 	}
 }
