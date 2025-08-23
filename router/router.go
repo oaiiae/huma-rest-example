@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
@@ -27,16 +28,38 @@ func New(
 	mux.HandleFunc("/readiness", readiness)
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) { set.WritePrometheus(w) })
 
+	metricsMap := sync.Map{}
+	metricsMu := sync.Mutex{}
+	metricsMiddleware := func(ctx huma.Context, next func(huma.Context)) {
+		op, start := ctx.Operation(), time.Now()
+		next(ctx)
+
+		type metricsMapValue struct {
+			http_requests_total           *metrics.Counter
+			http_request_duration_seconds *metrics.PrometheusHistogram
+		}
+
+		key := op.OperationID + http.StatusText(ctx.Status())
+		val, ok := metricsMap.Load(key)
+		if !ok {
+			metricsMu.Lock()
+			val, ok = metricsMap.Load(key)
+			if !ok {
+				labels := fmt.Sprintf(`{method=%q,path=%q,status="%d"}`, op.Method, op.Path, ctx.Status())
+				val = metricsMapValue{
+					set.NewCounter("http_requests_total" + labels),
+					set.NewPrometheusHistogramExt("http_request_duration_seconds"+labels, metrics.ExponentialBuckets(1e-3, 5, 6)),
+				}
+				metricsMap.Store(key, val)
+			}
+			metricsMu.Unlock()
+		}
+		val.(metricsMapValue).http_requests_total.Inc()
+		val.(metricsMapValue).http_request_duration_seconds.UpdateDuration(start)
+	}
+
 	api := humago.New(mux, huma.DefaultConfig(title, version))
-	api.UseMiddleware(
-		func(ctx huma.Context, next func(huma.Context)) {
-			op, start := ctx.Operation(), time.Now()
-			next(ctx)
-			labels := fmt.Sprintf(`{method=%q,path=%q,status="%d"}`, op.Method, op.Path, ctx.Status())
-			set.GetOrCreatePrometheusHistogramExt(`http_request_duration_seconds`+labels, buckets).UpdateDuration(start)
-			set.GetOrCreateCounter(`http_requests_total` + labels).Inc()
-		},
-	)
+	api.UseMiddleware(metricsMiddleware)
 	for _, opt := range opts {
 		opt(api)
 	}
