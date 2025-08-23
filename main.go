@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,12 +25,7 @@ var (
 	revision string
 	created  string
 )
-var WriteBuildinfoMetric = func(io.Writer) {}
-
-func init() {
-	b := fmt.Appendf(nil, "build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
-	WriteBuildinfoMetric = func(w io.Writer) { w.Write(b) }
-}
+var buildinfoMetric = fmt.Sprintf("build_info{title=%q,version=%q,revision=%q,created=%q} 1\n", title, version, revision, created)
 
 // Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
 type Options struct {
@@ -45,7 +39,7 @@ func main() {
 		router := router.New(title, version,
 			func(w http.ResponseWriter, r *http.Request) {},
 			func(w http.ResponseWriter, r *http.Request) {
-				WriteBuildinfoMetric(w)
+				fmt.Fprint(w, buildinfoMetric)
 				metriks.WritePrometheus(w)
 				metrics.WriteProcessMetrics(w)
 			},
