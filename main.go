@@ -103,7 +103,7 @@ func (key ctxlog) loggerMiddleware(parent *slog.Logger, level slog.Level) func(h
 		next(huma.WithValue(ctx, key, logger.WithGroup("op").With("id", ctx.Operation().OperationID)))
 
 		logger.LogAttrs(context.Background(), level,
-			ctx.Operation().Method+" "+ctx.Operation().Path+" "+ctx.Version().Proto,
+			joinSpace(ctx.Operation().Method, ctx.Operation().Path, ctx.Version().Proto),
 			slog.String("from", ctx.RemoteAddr()),
 			slog.String("ref", ctx.Header("Referer")),
 			slog.String("ua", ctx.Header("User-Agent")),
@@ -197,3 +197,6 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 
 // joinQuote is [strings.Join] with " as separator.
 func joinQuote(elems ...string) string { return strings.Join(elems, `"`) }
+
+// joinSpace is [strings.Join] with space as separator.
+func joinSpace(elems ...string) string { return strings.Join(elems, ` `) }
