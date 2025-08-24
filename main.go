@@ -27,7 +27,7 @@ type Options struct {
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := logger.New(&options.Logger)
-		server := server.New(title, version, revision, created, logger, &options.Server)
+		server := server.New(&options.Server, title, version, revision, created, logger)
 
 		hooks.OnStart(func() {
 			logger.Info("starting", "title", title, "version", version, "revision", revision, "created", created)

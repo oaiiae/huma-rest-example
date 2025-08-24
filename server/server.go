@@ -18,22 +18,23 @@ import (
 	"github.com/oaiiae/huma-rest-example/router"
 )
 
-// Options for the CLI. Pass `--port` or set the `SERVICE_PORT` env var.
 type Options struct {
-	Port int `help:"Port to listen on" short:"p" default:"8888"`
+	Host              string        `doc:"host to listen on" default:""`
+	Port              string        `doc:"port to listen on" default:"8888" short:"p"`
+	ReadHeaderTimeout time.Duration `doc:"time allowed to read request headers" default:"15s"`
 }
 
 func New(
+	options *Options,
 	title string,
 	version string,
 	revision string,
 	created string,
 	logger *slog.Logger,
-	options *Options,
 ) *http.Server {
 	return &http.Server{
-		Addr:              ":" + strconv.Itoa(options.Port),
-		ReadHeaderTimeout: 15 * time.Second,
+		Addr:              options.Host + ":" + options.Port,
+		ReadHeaderTimeout: options.ReadHeaderTimeout,
 		Handler:           NewHandler(title, version, revision, created, logger),
 	}
 }

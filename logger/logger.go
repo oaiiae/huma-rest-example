@@ -8,9 +8,9 @@ import (
 
 // Options for the CLI.
 type Options struct {
-	Output string `help:"" default:"-"`
-	Level  string `help:"" default:"info"`
-	Format string `help:"" default:"text"`
+	Output string `doc:"path to logfile" default:"-"`
+	Level  string `doc:"minimum log level" default:"info"`
+	Format string `doc:"log format" default:"text"`
 }
 
 func New(options *Options) *slog.Logger {
