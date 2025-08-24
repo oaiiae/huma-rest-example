@@ -8,9 +8,9 @@ import (
 )
 
 type Options struct {
-	Level   string `doc:"minimum log level" default:""`
-	Logfile string `doc:"write logs to file" default:""`
-	Format  string `doc:"log format" default:"text"`
+	Level  string `doc:"minimum log level" default:""`
+	File   string `doc:"append logs to file" default:""`
+	Format string `doc:"log format" default:"text"`
 }
 
 func New(options *Options) *slog.Logger {
@@ -36,15 +36,15 @@ func New(options *Options) *slog.Logger {
 	}
 
 	var output io.Writer
-	switch options.Logfile {
+	switch options.File {
 	case "":
 		output = os.Stdout
 	case os.DevNull:
 		return slog.New(slog.DiscardHandler)
 	default:
-		output, err = os.Open(options.Logfile)
+		output, err = os.OpenFile(options.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			options.Logfile = ""
+			options.File = ""
 			logger := New(options)
 			logger.Warn("could not open logger output", "err", err)
 			return logger
