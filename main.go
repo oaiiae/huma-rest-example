@@ -81,13 +81,15 @@ func main() {
 
 func accessLog(logger *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
+		start := time.Now()
 		next(ctx)
 		logger.LogAttrs(context.Background(), level,
 			ctx.Operation().Method+" "+ctx.Operation().Path+" "+ctx.Version().Proto,
 			slog.String("from", ctx.RemoteAddr()),
-			slog.Int("status", ctx.Status()),
 			slog.String("ref", ctx.Header("Referer")),
 			slog.String("ua", ctx.Header("User-Agent")),
+			slog.Int("status", ctx.Status()),
+			slog.Duration("dur", time.Since(start)),
 		)
 	}
 }
