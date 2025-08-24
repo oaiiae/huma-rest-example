@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,13 +36,12 @@ type Options struct {
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		buildinfoMetric := fmt.Sprintf("build_info{title=%q,version=%q,revision=%q,created=%q} 1\n",
-			title, version, revision, created)
+		buildinfoMetric := joinQuote("build_info{title=", title, ",version=", version, ",revision=", revision, ",created=", created, "} 1\n")
 		metriks := metrics.NewSet()
 		router := router.New(title, version,
 			func(_ http.ResponseWriter, _ *http.Request) {},
 			func(w http.ResponseWriter, _ *http.Request) {
-				fmt.Fprint(w, buildinfoMetric)
+				w.Write([]byte(buildinfoMetric))
 				metriks.WritePrometheus(w)
 				metrics.WriteProcessMetrics(w)
 			},
@@ -58,7 +58,7 @@ func main() {
 			),
 		)
 		server := http.Server{
-			Addr:              fmt.Sprintf(":%d", options.Port),
+			Addr:              ":" + strconv.Itoa(options.Port),
 			ReadHeaderTimeout: 15 * time.Second,
 			Handler:           router,
 		}
@@ -149,18 +149,18 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 		op, start := ctx.Operation(), time.Now()
 		next(ctx)
 
-		key := op.OperationID + http.StatusText(ctx.Status())
-		val, ok := refs.Load(key)
+		uid := op.OperationID + http.StatusText(ctx.Status())
+		val, ok := refs.Load(uid)
 		if !ok {
 			refsMu.Lock()
-			val, ok = refs.Load(key)
+			val, ok = refs.Load(uid)
 			if !ok {
-				labels := fmt.Sprintf(`{method=%q,path=%q,status="%d"}`, op.Method, op.Path, ctx.Status())
+				labels := joinQuote("{method=", op.Method, ",path=", op.Path, ",status=", strconv.Itoa(ctx.Status()), "}")
 				val = ref{
 					set.NewCounter("http_requests_total" + labels),
 					set.NewPrometheusHistogramExt("http_request_duration_seconds"+labels, buckets),
 				}
-				refs.Store(key, val)
+				refs.Store(uid, val)
 			}
 			refsMu.Unlock()
 		}
@@ -169,3 +169,6 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 		valref.histogram.UpdateDuration(start)
 	}
 }
+
+// joinQuote is [strings.Join] with " as separator.
+func joinQuote(elems ...string) string { return strings.Join(elems, `"`) }
