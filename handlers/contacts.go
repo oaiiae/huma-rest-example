@@ -1,15 +1,16 @@
-package handler
+package handlers
 
 import (
 	"context"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/oaiiae/huma-rest-example/store"
+
+	"github.com/oaiiae/huma-rest-example/datastores"
 )
 
 type Contacts struct {
-	Store        store.ContactsStore
+	Store        datastores.ContactsStore
 	ErrorHandler func(context.Context, error)
 }
 
@@ -59,7 +60,7 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 }) (*ContactsGetOutput, error) {
 	contact, err := h.Store.Get(ctx, input.ID)
 	switch err {
-	case store.ErrObjectNotFound:
+	case datastores.ErrObjectNotFound:
 		return nil, huma.Error404NotFound("id not found", err)
 	case nil:
 		return &ContactsGetOutput{Body: ContactModel{
@@ -82,7 +83,7 @@ func (h *Contacts) put(ctx context.Context, input *struct {
 		return nil, huma.Error400BadRequest("invalid format for birthday", err)
 	}
 
-	return nil, h.Store.Put(ctx, input.ID, &store.Contact{
+	return nil, h.Store.Put(ctx, input.ID, &datastores.Contact{
 		ID:        input.ID,
 		Firstname: input.Body.Firstname,
 		Lastname:  input.Body.Lastname,

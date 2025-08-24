@@ -15,9 +15,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humacli"
 
-	"github.com/oaiiae/huma-rest-example/handler"
+	"github.com/oaiiae/huma-rest-example/datastores"
+	"github.com/oaiiae/huma-rest-example/handlers"
 	"github.com/oaiiae/huma-rest-example/router"
-	"github.com/oaiiae/huma-rest-example/store"
 )
 
 // Information set at build time.
@@ -51,10 +51,10 @@ func main() {
 				ctxlog{}.recoverMiddleware(logger, slog.LevelError),
 			),
 			router.OptGroup("/api",
-				router.OptGroup("/panic", router.OptAutoRegister(&handler.Panic{})),
-				router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
-				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{
-					Store: new(store.ContactsInmem).With(store.Contact{
+				router.OptGroup("/panic", router.OptAutoRegister(&handlers.Panic{})),
+				router.OptGroup("/greeting", router.OptAutoRegister(&handlers.Greeting{})),
+				router.OptGroup("/contacts", router.OptAutoRegister(&handlers.Contacts{
+					Store: new(datastores.ContactsInmem).With(datastores.Contact{
 						ID:        12,
 						Firstname: "john",
 						Lastname:  "smith",
