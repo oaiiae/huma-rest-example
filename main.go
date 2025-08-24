@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -45,12 +46,15 @@ func main() {
 				metrics.WriteProcessMetrics(w)
 			},
 			router.OptUseMiddleware(
-				accessLog(logger, slog.LevelInfo),
+				ctxlog{}.middleware(logger, slog.LevelInfo),
 				meterRequests(metriks),
 			),
 			router.OptGroup("/api",
 				router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
-				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{Store: new(store.ContactsInmem)})),
+				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{
+					Store:        new(store.ContactsInmem),
+					ErrorHandler: ctxlog{}.errorHandler(logger, "/contacts"),
+				})),
 			),
 		)
 		server := http.Server{
@@ -79,10 +83,18 @@ func main() {
 	cli.Run()
 }
 
-func accessLog(logger *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
+// ctxlog is a [context.Context] key and acts as a virtual package for operations related to it.
+type ctxlog struct{}
+
+// middleware returns a middleware that sets a [slog.Logger] in the [context.Context]
+// using [ctxlog] as key and logs the request after it has terminated.
+func (key ctxlog) middleware(parent *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
+		logger := parent.With("x-request-id", ctx.Header("X-Request-Id"))
+
 		start := time.Now()
-		next(ctx)
+		next(huma.WithValue(ctx, key, logger.WithGroup("op").With("id", ctx.Operation().OperationID)))
+
 		logger.LogAttrs(context.Background(), level,
 			ctx.Operation().Method+" "+ctx.Operation().Path+" "+ctx.Version().Proto,
 			slog.String("from", ctx.RemoteAddr()),
@@ -91,6 +103,35 @@ func accessLog(logger *slog.Logger, level slog.Level) func(huma.Context, func(hu
 			slog.Int("status", ctx.Status()),
 			slog.Duration("dur", time.Since(start)),
 		)
+	}
+}
+
+// errorHandler returns a function that gets the [slog.Logger] in the [context.Context]
+// using [ctxlog] as key and logs the error.
+func (key ctxlog) errorHandler(fallback *slog.Logger, msg string) func(context.Context, error) {
+	return func(ctx context.Context, err error) {
+		logger, ok := ctx.Value(key).(*slog.Logger)
+		if !ok {
+			logger = fallback
+		}
+
+		level := slog.LevelError
+		attrs := []slog.Attr{slog.String("err", err.Error())}
+
+		var statusErr huma.StatusError
+		if errors.As(err, &statusErr) {
+			switch statusErr.GetStatus() / 100 {
+			case 5:
+				level = slog.LevelError
+			case 4:
+				level = slog.LevelWarn
+			case 3:
+				level = slog.LevelInfo
+			}
+			attrs = append(attrs, slog.Int("status", statusErr.GetStatus()))
+		}
+
+		logger.LogAttrs(context.Background(), level, msg, attrs...)
 	}
 }
 

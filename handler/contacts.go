@@ -9,14 +9,15 @@ import (
 )
 
 type Contacts struct {
-	Store store.ContactsStore
+	Store        store.ContactsStore
+	ErrorHandler func(context.Context, error)
 }
 
 func (h *Contacts) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
-	huma.Get(api, "/", h.list)
-	huma.Get(api, "/{id}", h.get)
-	huma.Put(api, "/{id}", h.put)
-	huma.Delete(api, "/{id}", h.del)
+	huma.Get(api, "/", handlerWithErrorHandler(h.list, h.ErrorHandler))
+	huma.Get(api, "/{id}", handlerWithErrorHandler(h.get, h.ErrorHandler))
+	huma.Put(api, "/{id}", handlerWithErrorHandler(h.put, h.ErrorHandler))
+	huma.Delete(api, "/{id}", handlerWithErrorHandler(h.del, h.ErrorHandler))
 }
 
 type ContactModel struct {
@@ -59,7 +60,7 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 	contact, err := h.Store.Get(ctx, input.ID)
 	switch err {
 	case store.ErrObjectNotFound:
-		return nil, huma.Error404NotFound("", err)
+		return nil, huma.Error404NotFound("id not found", err)
 	case nil:
 		return &ContactsGetOutput{Body: ContactModel{
 			ID:        contact.ID,
@@ -78,7 +79,7 @@ func (h *Contacts) put(ctx context.Context, input *struct {
 }) (*struct{}, error) {
 	birthday, err := time.Parse(time.DateOnly, input.Body.Birthday)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid birthday", err)
+		return nil, huma.Error400BadRequest("invalid format for birthday", err)
 	}
 
 	return nil, h.Store.Put(ctx, input.ID, &store.Contact{
