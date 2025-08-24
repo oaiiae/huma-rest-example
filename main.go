@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2/humacli"
 
+	"github.com/oaiiae/huma-rest-example/logger"
 	"github.com/oaiiae/huma-rest-example/server"
 )
 
@@ -21,12 +20,13 @@ var (
 )
 
 type Options struct {
+	Logger logger.Options
 	Server server.Options
 }
 
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
-		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		logger := logger.New(&options.Logger)
 		server := server.New(title, version, revision, created, logger, &options.Server)
 
 		hooks.OnStart(func() {
