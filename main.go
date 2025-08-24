@@ -46,10 +46,12 @@ func main() {
 				metrics.WriteProcessMetrics(w)
 			},
 			router.OptUseMiddleware(
-				ctxlog{}.middleware(logger, slog.LevelInfo),
+				ctxlog{}.loggerMiddleware(logger, slog.LevelInfo),
 				meterRequests(metriks),
+				ctxlog{}.recoverMiddleware(logger, slog.LevelError),
 			),
 			router.OptGroup("/api",
+				router.OptGroup("/panic", router.OptAutoRegister(&handler.Panic{})),
 				router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
 				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{
 					Store: new(store.ContactsInmem).With(store.Contact{
@@ -91,9 +93,9 @@ func main() {
 // ctxlog is a [context.Context] key and acts as a virtual package for operations related to it.
 type ctxlog struct{}
 
-// middleware returns a middleware that sets a [slog.Logger] in the [context.Context]
-// using [ctxlog] as key and logs the request after it has terminated.
-func (key ctxlog) middleware(parent *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
+// loggerMiddleware returns a middleware that sets a [slog.Logger] in
+// the [context.Context] and logs the request after it has terminated.
+func (key ctxlog) loggerMiddleware(parent *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		logger := parent.With("x-request-id", ctx.Header("X-Request-Id"))
 
@@ -108,6 +110,24 @@ func (key ctxlog) middleware(parent *slog.Logger, level slog.Level) func(huma.Co
 			slog.Int("status", ctx.Status()),
 			slog.Duration("dur", time.Since(start)),
 		)
+	}
+}
+
+// recoverMiddleware returns a middleware that recovers and logs the value from panic.
+func (key ctxlog) recoverMiddleware(fallback *slog.Logger, level slog.Level) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		defer func() {
+			v := recover()
+			if v != nil {
+				logger, ok := ctx.Context().Value(key).(*slog.Logger)
+				if !ok {
+					logger = fallback
+				}
+				logger.LogAttrs(context.Background(), level, "panic occured", slog.Any("recovered", v))
+				ctx.SetStatus(http.StatusInternalServerError)
+			}
+		}()
+		next(ctx)
 	}
 }
 
