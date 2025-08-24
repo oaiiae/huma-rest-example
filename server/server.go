@@ -31,9 +31,23 @@ func New(
 	logger *slog.Logger,
 	options *Options,
 ) *http.Server {
+	return &http.Server{
+		Addr:              ":" + strconv.Itoa(options.Port),
+		ReadHeaderTimeout: 15 * time.Second,
+		Handler:           NewHandler(title, version, revision, created, logger),
+	}
+}
+
+func NewHandler(
+	title string,
+	version string,
+	revision string,
+	created string,
+	logger *slog.Logger,
+) http.Handler {
 	buildinfoMetric := joinQuote("build_info{title=", title, ",version=", version, ",revision=", revision, ",created=", created, "} 1\n")
 	metriks := metrics.NewSet()
-	router := router.New(title, version,
+	return router.New(title, version,
 		func(_ http.ResponseWriter, _ *http.Request) {},
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte(buildinfoMetric))
@@ -59,11 +73,6 @@ func New(
 			})),
 		),
 	)
-	return &http.Server{
-		Addr:              ":" + strconv.Itoa(options.Port),
-		ReadHeaderTimeout: 15 * time.Second,
-		Handler:           router,
-	}
 }
 
 // ctxlog is a [context.Context] key and acts as a virtual package for operations related to it.
