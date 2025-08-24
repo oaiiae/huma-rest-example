@@ -5,11 +5,19 @@ import (
 	"sync"
 )
 
+// ContactsInmem implements [ContactsStore].
 type ContactsInmem struct {
 	m sync.Map
 }
 
-var _ ContactsStore = new(ContactsInmem)
+var _ ContactsStore = (*ContactsInmem)(nil)
+
+func (s *ContactsInmem) With(cs ...Contact) *ContactsInmem {
+	for _, c := range cs {
+		s.m.Store(c.ID, &c)
+	}
+	return s
+}
 
 func (s *ContactsInmem) List(_ context.Context) ([]*Contact, error) {
 	var contacts []*Contact
@@ -20,7 +28,7 @@ func (s *ContactsInmem) List(_ context.Context) ([]*Contact, error) {
 	return contacts, nil
 }
 
-func (s *ContactsInmem) Get(_ context.Context, id int) (*Contact, error) {
+func (s *ContactsInmem) Get(_ context.Context, id ContactID) (*Contact, error) {
 	value, ok := s.m.Load(id)
 	if !ok {
 		return nil, ErrObjectNotFound
@@ -28,12 +36,12 @@ func (s *ContactsInmem) Get(_ context.Context, id int) (*Contact, error) {
 	return value.(*Contact), nil
 }
 
-func (s *ContactsInmem) Put(_ context.Context, id int, c *Contact) error {
+func (s *ContactsInmem) Put(_ context.Context, id ContactID, c *Contact) error {
 	s.m.Store(id, c)
 	return nil
 }
 
-func (s *ContactsInmem) Del(_ context.Context, id int) error {
+func (s *ContactsInmem) Del(_ context.Context, id ContactID) error {
 	s.m.Delete(id)
 	return nil
 }

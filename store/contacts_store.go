@@ -17,10 +17,10 @@ type (
 )
 
 type ContactsStore interface {
-	List(ctx context.Context) ([]*Contact, error)
-	Get(ctx context.Context, id int) (*Contact, error)
-	Put(ctx context.Context, id int, c *Contact) error
-	Del(ctx context.Context, id int) error
+	List(context.Context) ([]*Contact, error)
+	Get(context.Context, ContactID) (*Contact, error)
+	Put(context.Context, ContactID, *Contact) error
+	Del(context.Context, ContactID) error
 }
 
 var ErrObjectNotFound = errors.New("store: object not found")

@@ -52,7 +52,12 @@ func main() {
 			router.OptGroup("/api",
 				router.OptGroup("/greeting", router.OptAutoRegister(&handler.Greeting{})),
 				router.OptGroup("/contacts", router.OptAutoRegister(&handler.Contacts{
-					Store:        new(store.ContactsInmem),
+					Store: new(store.ContactsInmem).With(store.Contact{
+						ID:        12,
+						Firstname: "john",
+						Lastname:  "smith",
+						Birthday:  time.Date(1999, time.December, 31, 0, 0, 0, 0, time.UTC),
+					}),
 					ErrorHandler: ctxlog{}.errorHandler(logger, "/contacts"),
 				})),
 			),
