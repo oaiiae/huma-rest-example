@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"context"
@@ -18,28 +18,26 @@ import (
 	"github.com/oaiiae/huma-rest-example/router"
 )
 
-type Options struct {
-	Host              string        `doc:"host to listen on" default:""`
+type ServerOptions struct {
+	Host              string        `doc:"host to listen on" default:"" short:"H"`
 	Port              string        `doc:"port to listen on" default:"8888" short:"p"`
 	ReadHeaderTimeout time.Duration `doc:"time allowed to read request headers" default:"15s"`
 }
 
-func New(
-	options *Options,
-	title string,
-	version string,
-	revision string,
-	created string,
-	logger *slog.Logger,
-) *http.Server {
+func NewServer(options *ServerOptions, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              options.Host + ":" + options.Port,
 		ReadHeaderTimeout: options.ReadHeaderTimeout,
-		Handler:           NewHandler(title, version, revision, created, logger),
+		Handler:           handler,
 	}
 }
 
-func NewHandler(
+type RouterOptions struct {
+	Prefix string `doc:"mount prefix" default:"/api"`
+}
+
+func NewRouter(
+	options *RouterOptions,
 	title string,
 	version string,
 	revision string,
@@ -60,7 +58,7 @@ func NewHandler(
 			meterRequests(metriks),
 			ctxlog{}.recoverMiddleware(logger, slog.LevelError),
 		),
-		router.OptGroup("/api",
+		router.OptGroup(options.Prefix,
 			router.OptGroup("/panic", router.OptAutoRegister(&handlers.Panic{})),
 			router.OptGroup("/greeting", router.OptAutoRegister(&handlers.Greeting{})),
 			router.OptGroup("/contacts", router.OptAutoRegister(&handlers.Contacts{

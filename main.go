@@ -7,8 +7,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humacli"
 
+	"github.com/oaiiae/huma-rest-example/api"
 	"github.com/oaiiae/huma-rest-example/logger"
-	"github.com/oaiiae/huma-rest-example/server"
 )
 
 // Information set at build time.
@@ -21,13 +21,15 @@ var (
 
 type Options struct {
 	Logger logger.Options
-	Server server.Options
+	Server api.ServerOptions
+	api.RouterOptions
 }
 
 func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := logger.New(&options.Logger)
-		server := server.New(&options.Server, title, version, revision, created, logger)
+		router := api.NewRouter(&options.RouterOptions, title, version, revision, created, logger)
+		server := api.NewServer(&options.Server, router)
 
 		hooks.OnStart(func() {
 			logger.Info("starting", "title", title, "version", version, "revision", revision, "created", created)
