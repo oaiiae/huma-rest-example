@@ -24,16 +24,17 @@ type ServerOptions struct {
 	ReadHeaderTimeout time.Duration `doc:"time allowed to read request headers" default:"15s"`
 }
 
-func NewServer(options *ServerOptions, handler http.Handler) *http.Server {
+func NewServer(options *ServerOptions, handler http.Handler, logger *slog.Logger) *http.Server {
 	return &http.Server{
 		Addr:              options.Host + ":" + options.Port,
 		ReadHeaderTimeout: options.ReadHeaderTimeout,
 		Handler:           handler,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 }
 
 type RouterOptions struct {
-	Prefix string `doc:"mount prefix" default:"/api"`
+	EndpointsPrefix string `doc:"mount endpoints at a prefix" default:"/api"`
 }
 
 func NewRouter(
@@ -58,7 +59,7 @@ func NewRouter(
 			meterRequests(metriks),
 			ctxlog{}.recoverMiddleware(logger, slog.LevelError),
 		),
-		router.OptGroup(options.Prefix,
+		router.OptGroup(options.EndpointsPrefix,
 			router.OptGroup("/panic", router.OptAutoRegister(&handlers.Panic{})),
 			router.OptGroup("/greeting", router.OptAutoRegister(&handlers.Greeting{})),
 			router.OptGroup("/contacts", router.OptAutoRegister(&handlers.Contacts{

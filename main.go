@@ -29,7 +29,7 @@ func main() {
 	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
 		logger := logger.New(&options.Logger)
 		router := api.NewRouter(&options.RouterOptions, title, version, revision, created, logger)
-		server := api.NewServer(&options.Server, router)
+		server := api.NewServer(&options.Server, router, logger)
 
 		hooks.OnStart(func() {
 			logger.Info("starting", "title", title, "version", version, "revision", revision, "created", created)

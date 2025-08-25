@@ -8,9 +8,9 @@ import (
 )
 
 type Options struct {
-	Level  string `doc:"minimum log level" default:""`
-	File   string `doc:"append logs to file" default:""`
-	Format string `doc:"log format" default:"text"`
+	Level  string `doc:"log from debug, info, warn or error"`
+	File   string `doc:"append logs to file"`
+	Format string `doc:"format logs as text or json" default:"text"`
 }
 
 func New(options *Options) *slog.Logger {
@@ -37,7 +37,7 @@ func New(options *Options) *slog.Logger {
 
 	var output io.Writer
 	switch options.File {
-	case "":
+	case "", "-":
 		output = os.Stdout
 	case os.DevNull:
 		return slog.New(slog.DiscardHandler)
