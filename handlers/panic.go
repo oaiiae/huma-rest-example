@@ -12,6 +12,6 @@ func (h *Panic) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
 	huma.Get(api, "/", h.handle)
 }
 
-func (h *Panic) handle(ctx context.Context, _ *struct{}) (*struct{}, error) {
+func (h *Panic) handle(_ context.Context, _ *struct{}) (*struct{}, error) {
 	panic("panic argument")
 }

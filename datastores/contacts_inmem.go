@@ -22,7 +22,7 @@ func (s *ContactsInmem) With(cs ...Contact) *ContactsInmem {
 func (s *ContactsInmem) List(_ context.Context) ([]*Contact, error) {
 	var contacts []*Contact
 	s.m.Range(func(_, value any) bool {
-		contacts = append(contacts, value.(*Contact))
+		contacts = append(contacts, value.(*Contact)) //nolint: errcheck // always [*Contact]
 		return true
 	})
 	return contacts, nil
@@ -33,7 +33,7 @@ func (s *ContactsInmem) Get(_ context.Context, id ContactID) (*Contact, error) {
 	if !ok {
 		return nil, ErrObjectNotFound
 	}
-	return value.(*Contact), nil
+	return value.(*Contact), nil //nolint: errcheck // always [*Contact]
 }
 
 func (s *ContactsInmem) Put(_ context.Context, id ContactID, c *Contact) error {

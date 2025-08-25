@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -22,10 +23,10 @@ func (h *Contacts) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
 }
 
 type ContactModel struct {
-	ID        int    `json:"id" example:"12" readOnly:"true"`
+	ID        int    `json:"id"        example:"12"         readOnly:"true"`
 	Firstname string `json:"firstname" example:"john"`
-	Lastname  string `json:"lastname" example:"smith"`
-	Birthday  string `json:"birthday" format:"date" example:"1999-12-31"`
+	Lastname  string `json:"lastname"  example:"smith"`
+	Birthday  string `json:"birthday"  example:"1999-12-31"                 format:"date"`
 }
 
 type ContactsListOutput struct {
@@ -59,10 +60,10 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 	ID int `path:"id" example:"12" doc:"ID of the contact to get"`
 }) (*ContactsGetOutput, error) {
 	contact, err := h.Store.Get(ctx, input.ID)
-	switch err {
-	case datastores.ErrObjectNotFound:
+	switch {
+	case errors.Is(err, datastores.ErrObjectNotFound):
 		return nil, huma.Error404NotFound("id not found", err)
-	case nil:
+	case err == nil:
 		return &ContactsGetOutput{Body: ContactModel{
 			ID:        contact.ID,
 			Firstname: contact.Firstname,

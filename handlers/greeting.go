@@ -20,7 +20,7 @@ type GreetingOutput struct {
 	}
 }
 
-func (h *Greeting) handle(ctx context.Context, input *struct {
+func (h *Greeting) handle(_ context.Context, input *struct {
 	Name string `path:"name" maxLength:"30" example:"world" doc:"Name to greet"`
 }) (*GreetingOutput, error) {
 	resp := &GreetingOutput{}

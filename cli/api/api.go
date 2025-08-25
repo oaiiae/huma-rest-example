@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -19,9 +20,9 @@ import (
 )
 
 type ServerOptions struct {
-	Host              string        `doc:"host to listen on" default:"" short:"H"`
-	Port              string        `doc:"port to listen on" default:"8888" short:"p"`
-	ReadHeaderTimeout time.Duration `doc:"time allowed to read request headers" default:"15s"`
+	Host              string        `short:"H" doc:"host to listen on"                    default:""`
+	Port              string        `short:"p" doc:"port to listen on"                    default:"8888"`
+	ReadHeaderTimeout time.Duration `          doc:"time allowed to read request headers" default:"15s"`
 }
 
 func NewServer(options *ServerOptions, handler http.Handler, logger *slog.Logger) *http.Server {
@@ -45,12 +46,12 @@ func NewRouter(
 	created string,
 	logger *slog.Logger,
 ) http.Handler {
-	buildinfoMetric := joinQuote("build_info{title=", title, ",version=", version, ",revision=", revision, ",created=", created, "} 1\n")
+	buildinfoMetric := joinQuote("build_info{title=", title, ",version=", version, ",revision=", revision, ",created=", created, "} 1\n") //nolint: golines
 	metriks := metrics.NewSet()
 	return router.New(title, version,
 		func(_ http.ResponseWriter, _ *http.Request) {},
 		func(w http.ResponseWriter, _ *http.Request) {
-			w.Write([]byte(buildinfoMetric))
+			fmt.Fprint(w, buildinfoMetric)
 			metriks.WritePrometheus(w)
 			metrics.WriteProcessMetrics(w)
 		},
@@ -64,7 +65,7 @@ func NewRouter(
 			router.OptGroup("/greeting", router.OptAutoRegister(&handlers.Greeting{})),
 			router.OptGroup("/contacts", router.OptAutoRegister(&handlers.Contacts{
 				Store: new(datastores.ContactsInmem).With(datastores.Contact{
-					ID:        12,
+					ID:        12, //nolint: mnd // arbitrary example
 					Firstname: "john",
 					Lastname:  "smith",
 					Birthday:  time.Date(1999, time.December, 31, 0, 0, 0, 0, time.UTC),
@@ -131,11 +132,11 @@ func (key ctxlog) errorHandler(fallback *slog.Logger, msg string) func(context.C
 		var statusErr huma.StatusError
 		if errors.As(err, &statusErr) {
 			switch statusErr.GetStatus() / 100 {
-			case 5:
+			case 5: //nolint: mnd // 5XX Status Codes
 				level = slog.LevelError
-			case 4:
+			case 4: //nolint: mnd // 4XX Status Codes
 				level = slog.LevelWarn
-			case 3:
+			case 3: //nolint: mnd // 3XX Status Codes
 				level = slog.LevelInfo
 			}
 			attrs = append(attrs, slog.Int("status", statusErr.GetStatus()))
@@ -165,7 +166,7 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 			refsMu.Lock()
 			val, ok = refs.Load(uid)
 			if !ok {
-				labels := joinQuote("{method=", op.Method, ",path=", op.Path, ",status=", strconv.Itoa(ctx.Status()), "}")
+				labels := joinQuote("{method=", op.Method, ",path=", op.Path, ",status=", strconv.Itoa(ctx.Status()), "}") //nolint: golines
 				val = ref{
 					set.NewCounter("http_requests_total" + labels),
 					set.NewPrometheusHistogramExt("http_request_duration_seconds"+labels, buckets),
