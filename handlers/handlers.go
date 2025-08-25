@@ -1,6 +1,10 @@
 package handlers
 
-import "context"
+import (
+	"context"
+
+	"github.com/danielgtaylor/huma/v2"
+)
 
 type handler[I, O any] = func(context.Context, *I) (*O, error)
 
@@ -16,4 +20,8 @@ func handlerWithErrorHandler[I, O any](handler handler[I, O], do func(context.Co
 		}
 		return o, err
 	}
+}
+
+func opErrors(codes ...int) func(*huma.Operation) {
+	return func(o *huma.Operation) { o.Errors = codes }
 }

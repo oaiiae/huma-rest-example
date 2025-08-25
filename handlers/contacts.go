@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -15,18 +16,18 @@ type Contacts struct {
 	ErrorHandler func(context.Context, error)
 }
 
-func (h *Contacts) RegisterAPI(api huma.API) { // called by [huma.AutoRegister]
-	huma.Get(api, "/", handlerWithErrorHandler(h.list, h.ErrorHandler))
-	huma.Get(api, "/{id}", handlerWithErrorHandler(h.get, h.ErrorHandler))
-	huma.Put(api, "/{id}", handlerWithErrorHandler(h.put, h.ErrorHandler))
-	huma.Delete(api, "/{id}", handlerWithErrorHandler(h.del, h.ErrorHandler))
-}
-
 type ContactModel struct {
 	ID        int    `json:"id"        example:"12"         readOnly:"true"`
 	Firstname string `json:"firstname" example:"john"`
 	Lastname  string `json:"lastname"  example:"smith"`
 	Birthday  string `json:"birthday"  example:"1999-12-31"                 format:"date"`
+}
+
+func (h *Contacts) RegisterList(api huma.API) { // called by [huma.AutoRegister]
+	huma.Get(api, "/",
+		handlerWithErrorHandler(h.list, h.ErrorHandler),
+		opErrors(http.StatusInternalServerError),
+	)
 }
 
 type ContactsListOutput struct {
@@ -52,6 +53,13 @@ func (h *Contacts) list(ctx context.Context, _ *struct{}) (*ContactsListOutput, 
 	return &ContactsListOutput{Body: body}, nil
 }
 
+func (h *Contacts) RegisterGet(api huma.API) { // called by [huma.AutoRegister]
+	huma.Get(api, "/{id}",
+		handlerWithErrorHandler(h.get, h.ErrorHandler),
+		opErrors(http.StatusNotFound, http.StatusInternalServerError),
+	)
+}
+
 type ContactsGetOutput struct {
 	Body ContactModel
 }
@@ -61,8 +69,6 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 }) (*ContactsGetOutput, error) {
 	contact, err := h.Store.Get(ctx, input.ID)
 	switch {
-	case errors.Is(err, datastores.ErrObjectNotFound):
-		return nil, huma.Error404NotFound("id not found", err)
 	case err == nil:
 		return &ContactsGetOutput{Body: ContactModel{
 			ID:        contact.ID,
@@ -70,9 +76,20 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 			Lastname:  contact.Lastname,
 			Birthday:  contact.Birthday.Format(time.DateOnly),
 		}}, nil
+
+	case errors.Is(err, datastores.ErrObjectNotFound):
+		return nil, huma.Error404NotFound("id not found", err)
+
 	default:
 		return nil, err
 	}
+}
+
+func (h *Contacts) RegisterPut(api huma.API) { // called by [huma.AutoRegister]
+	huma.Put(api, "/{id}",
+		handlerWithErrorHandler(h.put, h.ErrorHandler),
+		opErrors(http.StatusBadRequest, http.StatusInternalServerError),
+	)
 }
 
 func (h *Contacts) put(ctx context.Context, input *struct {
@@ -90,6 +107,13 @@ func (h *Contacts) put(ctx context.Context, input *struct {
 		Lastname:  input.Body.Lastname,
 		Birthday:  birthday,
 	})
+}
+
+func (h *Contacts) RegisterDel(api huma.API) { // called by [huma.AutoRegister]
+	huma.Delete(api, "/{id}",
+		handlerWithErrorHandler(h.del, h.ErrorHandler),
+		opErrors(http.StatusInternalServerError),
+	)
 }
 
 func (h *Contacts) del(ctx context.Context, input *struct {
