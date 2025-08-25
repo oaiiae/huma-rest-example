@@ -122,7 +122,7 @@ func (key ctxlog) recoverMiddleware(fallback *slog.Logger) func(huma.Context, fu
 func (key ctxlog) errorHandler(fallback *slog.Logger) func(context.Context, error) {
 	return func(ctx context.Context, err error) {
 		level := slog.LevelError
-		attrs := []slog.Attr{slog.String("err", err.Error())}
+		attrs := []slog.Attr{slog.Any("err", err)}
 
 		var statusErr huma.StatusError
 		if errors.As(err, &statusErr) {
@@ -147,8 +147,8 @@ func (key ctxlog) errorHandler(fallback *slog.Logger) func(context.Context, erro
 
 func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 	type ref struct {
-		total     *metrics.Counter
-		histogram *metrics.PrometheusHistogram
+		*metrics.Counter
+		*metrics.PrometheusHistogram
 	}
 
 	refs := sync.Map{}
@@ -175,8 +175,8 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 			refsMu.Unlock()
 		}
 		valref := val.(ref) //nolint: errcheck // always true
-		valref.total.Inc()
-		valref.histogram.UpdateDuration(start)
+		valref.Counter.Inc()
+		valref.PrometheusHistogram.UpdateDuration(start)
 	}
 }
 

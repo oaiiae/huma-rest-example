@@ -52,7 +52,7 @@ func New(options *Options) *slog.Logger {
 		if err != nil {
 			options.File = ""
 			logger := New(options)
-			logger.Warn("could not open logger output", "err", err)
+			logger.Warn("could not open logger file", "err", err)
 			return logger
 		}
 	}
