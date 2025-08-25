@@ -8,19 +8,19 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/oaiiae/huma-rest-example/datastores"
+	ds "github.com/oaiiae/huma-rest-example/datastores"
 )
 
 type Contacts struct {
-	Store        datastores.ContactsStore
+	Store        ds.ContactsStore
 	ErrorHandler func(context.Context, error)
 }
 
 type ContactModel struct {
-	ID        int    `json:"id"        example:"12"         readOnly:"true"`
-	Firstname string `json:"firstname" example:"john"`
-	Lastname  string `json:"lastname"  example:"smith"`
-	Birthday  string `json:"birthday"  example:"1999-12-31"                 format:"date"`
+	ID        ds.ContactID `json:"id"        example:"12"         readOnly:"true"`
+	Firstname string       `json:"firstname" example:"john"`
+	Lastname  string       `json:"lastname"  example:"smith"`
+	Birthday  string       `json:"birthday"  example:"1999-12-31"                 format:"date"`
 }
 
 func (h *Contacts) RegisterList(api huma.API) { // called by [huma.AutoRegister]
@@ -65,7 +65,7 @@ type ContactsGetOutput struct {
 }
 
 func (h *Contacts) get(ctx context.Context, input *struct {
-	ID int `path:"id" example:"12" doc:"ID of the contact to get"`
+	ID ds.ContactID `path:"id" example:"12" doc:"ID of the contact to get"`
 }) (*ContactsGetOutput, error) {
 	contact, err := h.Store.Get(ctx, input.ID)
 	switch {
@@ -77,7 +77,7 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 			Birthday:  contact.Birthday.Format(time.DateOnly),
 		}}, nil
 
-	case errors.Is(err, datastores.ErrObjectNotFound):
+	case errors.Is(err, ds.ErrObjectNotFound):
 		return nil, huma.Error404NotFound("id not found", err)
 
 	default:
@@ -88,20 +88,20 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 func (h *Contacts) RegisterPut(api huma.API) { // called by [huma.AutoRegister]
 	huma.Put(api, "/{id}",
 		handlerWithErrorHandler(h.put, h.ErrorHandler),
-		opErrors(http.StatusBadRequest, http.StatusInternalServerError),
+		opErrors(http.StatusUnprocessableEntity, http.StatusInternalServerError),
 	)
 }
 
 func (h *Contacts) put(ctx context.Context, input *struct {
-	ID   int `path:"id" example:"12" doc:"ID of the contact to put"`
+	ID   ds.ContactID `path:"id" example:"12" doc:"ID of the contact to put"`
 	Body ContactModel
 }) (*struct{}, error) {
 	birthday, err := time.Parse(time.DateOnly, input.Body.Birthday)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid format for birthday", err)
+		return nil, huma.Error422UnprocessableEntity("invalid format for birthday", err)
 	}
 
-	return nil, h.Store.Put(ctx, input.ID, &datastores.Contact{
+	return nil, h.Store.Put(ctx, input.ID, &ds.Contact{
 		ID:        input.ID,
 		Firstname: input.Body.Firstname,
 		Lastname:  input.Body.Lastname,
@@ -117,7 +117,7 @@ func (h *Contacts) RegisterDel(api huma.API) { // called by [huma.AutoRegister]
 }
 
 func (h *Contacts) del(ctx context.Context, input *struct {
-	ID int `path:"id" example:"12" doc:"ID of the contact to delete"`
+	ID ds.ContactID `path:"id" example:"12" doc:"ID of the contact to delete"`
 }) (*struct{}, error) {
 	return nil, h.Store.Del(ctx, input.ID)
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	ContactID = int
+	ContactID int
 	Contact   struct {
 		ID        ContactID
 		Firstname string
