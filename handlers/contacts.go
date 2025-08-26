@@ -17,10 +17,11 @@ type Contacts struct {
 }
 
 type ContactModel struct {
-	ID        ds.ContactID `json:"id"        example:"12"         readOnly:"true"`
-	Firstname string       `json:"firstname" example:"john"`
-	Lastname  string       `json:"lastname"  example:"smith"`
-	Birthday  string       `json:"birthday"  example:"1999-12-31"                 format:"date"`
+	ID ds.ContactID `json:"id" readOnly:"true"`
+
+	Firstname string `json:"firstname" example:"john"`
+	Lastname  string `json:"lastname"  example:"smith"`
+	Birthday  string `json:"birthday"  example:"1999-12-31" format:"date"`
 }
 
 func (h *Contacts) RegisterList(api huma.API) { // called by [huma.AutoRegister]
@@ -65,7 +66,7 @@ type ContactsGetOutput struct {
 }
 
 func (h *Contacts) get(ctx context.Context, input *struct {
-	ID ds.ContactID `path:"id" example:"12" doc:"ID of the contact to get"`
+	ID ds.ContactID `path:"id" doc:"ID of the contact to get"`
 }) (*ContactsGetOutput, error) {
 	contact, err := h.Store.Get(ctx, input.ID)
 	switch {
@@ -93,7 +94,7 @@ func (h *Contacts) RegisterPut(api huma.API) { // called by [huma.AutoRegister]
 }
 
 func (h *Contacts) put(ctx context.Context, input *struct {
-	ID   ds.ContactID `path:"id" example:"12" doc:"ID of the contact to put"`
+	ID   ds.ContactID `path:"id" doc:"ID of the contact to put"`
 	Body ContactModel
 }) (*struct{}, error) {
 	birthday, err := time.Parse(time.DateOnly, input.Body.Birthday)
@@ -117,7 +118,7 @@ func (h *Contacts) RegisterDel(api huma.API) { // called by [huma.AutoRegister]
 }
 
 func (h *Contacts) del(ctx context.Context, input *struct {
-	ID ds.ContactID `path:"id" example:"12" doc:"ID of the contact to delete"`
+	ID ds.ContactID `path:"id" doc:"ID of the contact to delete"`
 }) (*struct{}, error) {
 	return nil, h.Store.Del(ctx, input.ID)
 }

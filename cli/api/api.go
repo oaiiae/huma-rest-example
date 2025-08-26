@@ -65,7 +65,7 @@ func NewRouter(
 			router.OptGroup("/greeting", router.OptAutoRegister(&handlers.Greeting{})),
 			router.OptGroup("/contacts", router.OptAutoRegister(&handlers.Contacts{
 				Store: new(datastores.ContactsInmem).With(datastores.Contact{
-					ID:        12, //nolint: mnd // arbitrary example
+					ID:        datastores.NewContactID(),
 					Firstname: "john",
 					Lastname:  "smith",
 					Birthday:  time.Date(1999, time.December, 31, 0, 0, 0, 0, time.UTC),

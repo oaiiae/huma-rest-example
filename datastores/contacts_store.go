@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	ContactID int
+	ContactID struct{ UUID }
 	Contact   struct {
 		ID        ContactID
 		Firstname string
@@ -15,6 +15,8 @@ type (
 		Birthday  time.Time
 	}
 )
+
+func NewContactID() ContactID { return ContactID{newUUID()} }
 
 type ContactsStore interface {
 	List(context.Context) ([]*Contact, error)
