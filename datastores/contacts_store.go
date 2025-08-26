@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	ContactID struct{ UUID }
+	ContactID struct{ uuid32 }
 	Contact   struct {
 		ID        ContactID
 		Firstname string
@@ -16,13 +16,11 @@ type (
 	}
 )
 
-func NewContactID() ContactID { return ContactID{newUUID()} }
-
 type ContactsStore interface {
+	Create(context.Context, *Contact) (ContactID, error)
 	List(context.Context) ([]*Contact, error)
 	Get(context.Context, ContactID) (*Contact, error)
-	Put(context.Context, ContactID, *Contact) error
-	Del(context.Context, ContactID) error
+	Delete(context.Context, ContactID) error
 }
 
 var ErrObjectNotFound = errors.New("store: object not found")

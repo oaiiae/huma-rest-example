@@ -13,10 +13,23 @@ type ContactsInmem struct {
 var _ ContactsStore = (*ContactsInmem)(nil)
 
 func (s *ContactsInmem) With(cs ...Contact) *ContactsInmem {
-	for _, c := range cs {
-		s.m.Store(c.ID, &c)
+	for i := range cs {
+		_, err := s.Create(context.Background(), &cs[i])
+		if err != nil {
+			panic(err)
+		}
 	}
 	return s
+}
+
+func (s *ContactsInmem) Create(_ context.Context, c *Contact) (ContactID, error) {
+retry:
+	c.ID = ContactID{*new(uuid32).initV4()}
+	_, loaded := s.m.LoadOrStore(c.ID, c)
+	if loaded {
+		goto retry
+	}
+	return c.ID, nil
 }
 
 func (s *ContactsInmem) List(_ context.Context) ([]*Contact, error) {
@@ -36,12 +49,7 @@ func (s *ContactsInmem) Get(_ context.Context, id ContactID) (*Contact, error) {
 	return value.(*Contact), nil //nolint: errcheck // always [*Contact]
 }
 
-func (s *ContactsInmem) Put(_ context.Context, id ContactID, c *Contact) error {
-	s.m.Store(id, c)
-	return nil
-}
-
-func (s *ContactsInmem) Del(_ context.Context, id ContactID) error {
+func (s *ContactsInmem) Delete(_ context.Context, id ContactID) error {
 	s.m.Delete(id)
 	return nil
 }

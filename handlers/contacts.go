@@ -16,12 +16,47 @@ type Contacts struct {
 	ErrorHandler func(context.Context, error)
 }
 
-type ContactModel struct {
+type ContactIDModel struct {
 	ID ds.ContactID `json:"id" readOnly:"true"`
+}
+
+type ContactModel struct {
+	ContactIDModel
 
 	Firstname string `json:"firstname" example:"john"`
 	Lastname  string `json:"lastname"  example:"smith"`
 	Birthday  string `json:"birthday"  example:"1999-12-31" format:"date"`
+}
+
+func (h *Contacts) RegisterCreate(api huma.API) { // called by [huma.AutoRegister]
+	huma.Put(api, "/",
+		handlerWithErrorHandler(h.create, h.ErrorHandler),
+		opErrors(http.StatusUnprocessableEntity, http.StatusInternalServerError),
+	)
+}
+
+type ContactsCreateOutput struct {
+	Body ContactIDModel
+}
+
+func (h *Contacts) create(ctx context.Context, input *struct {
+	Body ContactModel
+}) (*ContactsCreateOutput, error) {
+	birthday, err := time.Parse(time.DateOnly, input.Body.Birthday)
+	if err != nil {
+		return nil, huma.Error422UnprocessableEntity("invalid format for birthday", err)
+	}
+
+	id, err := h.Store.Create(ctx, &ds.Contact{
+		Firstname: input.Body.Firstname,
+		Lastname:  input.Body.Lastname,
+		Birthday:  birthday,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContactsCreateOutput{Body: ContactIDModel{id}}, nil
 }
 
 func (h *Contacts) RegisterList(api huma.API) { // called by [huma.AutoRegister]
@@ -44,10 +79,10 @@ func (h *Contacts) list(ctx context.Context, _ *struct{}) (*ContactsListOutput, 
 	body := make([]ContactModel, 0, len(contacts))
 	for _, contact := range contacts {
 		body = append(body, ContactModel{
-			ID:        contact.ID,
-			Firstname: contact.Firstname,
-			Lastname:  contact.Lastname,
-			Birthday:  contact.Birthday.Format(time.DateOnly),
+			ContactIDModel: ContactIDModel{contact.ID},
+			Firstname:      contact.Firstname,
+			Lastname:       contact.Lastname,
+			Birthday:       contact.Birthday.Format(time.DateOnly),
 		})
 	}
 
@@ -72,10 +107,10 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 	switch {
 	case err == nil:
 		return &ContactsGetOutput{Body: ContactModel{
-			ID:        contact.ID,
-			Firstname: contact.Firstname,
-			Lastname:  contact.Lastname,
-			Birthday:  contact.Birthday.Format(time.DateOnly),
+			ContactIDModel: ContactIDModel{contact.ID},
+			Firstname:      contact.Firstname,
+			Lastname:       contact.Lastname,
+			Birthday:       contact.Birthday.Format(time.DateOnly),
 		}}, nil
 
 	case errors.Is(err, ds.ErrObjectNotFound):
@@ -86,39 +121,15 @@ func (h *Contacts) get(ctx context.Context, input *struct {
 	}
 }
 
-func (h *Contacts) RegisterPut(api huma.API) { // called by [huma.AutoRegister]
-	huma.Put(api, "/{id}",
-		handlerWithErrorHandler(h.put, h.ErrorHandler),
-		opErrors(http.StatusUnprocessableEntity, http.StatusInternalServerError),
-	)
-}
-
-func (h *Contacts) put(ctx context.Context, input *struct {
-	ID   ds.ContactID `path:"id" doc:"ID of the contact to put"`
-	Body ContactModel
-}) (*struct{}, error) {
-	birthday, err := time.Parse(time.DateOnly, input.Body.Birthday)
-	if err != nil {
-		return nil, huma.Error422UnprocessableEntity("invalid format for birthday", err)
-	}
-
-	return nil, h.Store.Put(ctx, input.ID, &ds.Contact{
-		ID:        input.ID,
-		Firstname: input.Body.Firstname,
-		Lastname:  input.Body.Lastname,
-		Birthday:  birthday,
-	})
-}
-
-func (h *Contacts) RegisterDel(api huma.API) { // called by [huma.AutoRegister]
+func (h *Contacts) RegisterDelete(api huma.API) { // called by [huma.AutoRegister]
 	huma.Delete(api, "/{id}",
-		handlerWithErrorHandler(h.del, h.ErrorHandler),
+		handlerWithErrorHandler(h.delete, h.ErrorHandler),
 		opErrors(http.StatusInternalServerError),
 	)
 }
 
-func (h *Contacts) del(ctx context.Context, input *struct {
+func (h *Contacts) delete(ctx context.Context, input *struct {
 	ID ds.ContactID `path:"id" doc:"ID of the contact to delete"`
 }) (*struct{}, error) {
-	return nil, h.Store.Del(ctx, input.ID)
+	return nil, h.Store.Delete(ctx, input.ID)
 }
