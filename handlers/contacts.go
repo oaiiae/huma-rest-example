@@ -70,8 +70,11 @@ type ContactsListOutput struct {
 	Body []ContactModel
 }
 
-func (h *Contacts) list(ctx context.Context, _ *struct{}) (*ContactsListOutput, error) {
-	contacts, err := h.Store.List(ctx)
+func (h *Contacts) list(ctx context.Context, input *struct {
+	Page int `query:"page" default:"1"  minimum:"1"`
+	Size int `query:"size" default:"10" minimum:"1" maximum:"100"`
+}) (*ContactsListOutput, error) {
+	contacts, err := h.Store.List(ctx, (input.Page-1)*input.Size, input.Size)
 	if err != nil {
 		return nil, err
 	}

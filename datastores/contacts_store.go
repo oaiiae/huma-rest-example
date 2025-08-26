@@ -18,7 +18,7 @@ type (
 
 type ContactsStore interface {
 	Create(context.Context, *Contact) (ContactID, error)
-	List(context.Context) ([]*Contact, error)
+	List(_ context.Context, offset, length int) ([]*Contact, error)
 	Get(context.Context, ContactID) (*Contact, error)
 	Delete(context.Context, ContactID) error
 }
