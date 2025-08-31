@@ -63,7 +63,8 @@ func NewRouter(
 		},
 		router.OptUseMiddleware(
 			ctxlog{}.loggerMiddleware(logger),
-			meterRequests(metriks),
+			meterRequestsMiddleware(metriks),
+			meterRequestsStatusMiddleware(metriks),
 			ctxlog{}.recoverMiddleware(logger),
 		),
 		router.OptGroup(options.EndpointsPrefix,
@@ -150,31 +151,60 @@ func (key ctxlog) errorHandler(fallback *slog.Logger) func(context.Context, erro
 	}
 }
 
-func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
-	type ref struct {
-		*metrics.Counter
-		*metrics.PrometheusHistogram
-	}
-
-	refs := sync.Map{}
-	buckets := metrics.ExponentialBuckets(1e-3, 5, 6) //nolint: mnd // arbitrary
-
+// meterRequestsMiddleware returns a middleware registering metrics about requests.
+//
+//   - http_requests_in_flight{method,path}
+func meterRequestsMiddleware(set *metrics.Set) func(huma.Context, func(huma.Context)) {
+	smap := sync.Map{}
 	return func(ctx huma.Context, next func(huma.Context)) {
-		op, start := ctx.Operation(), time.Now()
+		op := ctx.Operation()
+		k := op.OperationID
+		v, ok := smap.Load(k)
+		if !ok {
+			labels := joinQuote("{method=", op.Method, ",path=", op.Path, "}")
+			v, _ = smap.LoadOrStore(k,
+				set.GetOrCreateCounter("http_requests_in_flight"+labels),
+			)
+		}
+		val := v.(*metrics.Counter) //nolint: errcheck // always true
+		val.Inc()
+		defer val.Dec()
+
+		next(ctx)
+	}
+}
+
+// meterRequestsStatusMiddleware returns a middleware registering metrics about requests and their response status.
+//
+//   - http_request_duration_seconds_bucket{method,path,status,le}
+//   - http_request_duration_seconds_sum{method,path,status}
+//   - http_request_duration_seconds_count{method,path,status}
+//   - http_requests_total{method,path,status}
+func meterRequestsStatusMiddleware(set *metrics.Set) func(huma.Context, func(huma.Context)) {
+	type value struct {
+		*metrics.PrometheusHistogram
+		*metrics.Counter
+	}
+	var buckets = metrics.ExponentialBuckets(1e-3, 5, 6) //nolint: mnd // arbitrary
+
+	smap := sync.Map{}
+	return func(ctx huma.Context, next func(huma.Context)) {
+		start := time.Now()
 		next(ctx)
 
-		uid := op.OperationID + http.StatusText(ctx.Status())
-		val, ok := refs.Load(uid)
+		op := ctx.Operation()
+		k := op.OperationID + http.StatusText(ctx.Status())
+		v, ok := smap.Load(k)
 		if !ok {
 			labels := joinQuote("{method=", op.Method, ",path=", op.Path, ",status=", strconv.Itoa(ctx.Status()), "}") //nolint: golines
-			val, _ = refs.LoadOrStore(uid, ref{
-				set.GetOrCreateCounter("http_requests_total" + labels),
+			v, _ = smap.LoadOrStore(k, value{
 				set.GetOrCreatePrometheusHistogramExt("http_request_duration_seconds"+labels, buckets),
+				set.GetOrCreateCounter("http_requests_total" + labels),
 			})
 		}
-		valref := val.(ref) //nolint: errcheck // always true
-		valref.Counter.Inc()
-		valref.PrometheusHistogram.UpdateDuration(start)
+		val := v.(value) //nolint: errcheck // always true
+		val.PrometheusHistogram.UpdateDuration(start)
+		val.Counter.Inc()
 	}
 }
 
