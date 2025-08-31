@@ -71,7 +71,7 @@ func NewRouter(
 			router.OptGroup("/panic", router.OptAutoRegister(&handlers.Panic{})),
 			router.OptGroup("/greeting", router.OptAutoRegister(&handlers.Greeting{})),
 			router.OptGroup("/contacts", router.OptAutoRegister(&handlers.Contacts{
-				Store: datastores.NewContactsInmem(&datastores.Contact{
+				Store: datastores.MustNewContactsInmem(&datastores.Contact{
 					Firstname: "john",
 					Lastname:  "smith",
 					Birthday:  time.Date(1999, time.December, 31, 0, 0, 0, 0, time.UTC),

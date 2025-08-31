@@ -15,22 +15,22 @@ type ContactsInmem struct {
 
 var _ ContactsStore = (*ContactsInmem)(nil)
 
-func NewContactsInmem(cs ...*Contact) *ContactsInmem {
-	index := make(map[ContactID]int, len(cs))
-	for i, c := range cs {
-		index[c.ID] = i
+func MustNewContactsInmem(cs ...*Contact) *ContactsInmem {
+	s := &ContactsInmem{index: map[ContactID]int{}}
+	for _, c := range cs {
+		_, err := s.Create(context.Background(), c)
+		if err != nil {
+			panic(err)
+		}
 	}
-	return &ContactsInmem{index: index, contacts: cs}
+	return s
 }
 
 func (s *ContactsInmem) Create(_ context.Context, c *Contact) (ContactID, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-retry:
-	c.ID = ContactID{*new(uuid32).initV4()}
-	_, loaded := s.index[c.ID]
-	if loaded {
-		goto retry
+	for ko := true; ko; _, ko = s.index[c.ID] {
+		c.ID.initV4()
 	}
 	s.index[c.ID] = len(s.contacts)
 	s.contacts = append(s.contacts, c)
