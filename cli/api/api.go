@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,12 @@ func NewRouter(
 	created string,
 	logger *slog.Logger,
 ) http.Handler {
-	buildinfoMetric := joinQuote("build_info{title=", title, ",version=", version, ",revision=", revision, ",created=", created, "} 1\n") //nolint: golines
+	buildinfoMetric := joinQuote("build_info{goversion=", runtime.Version(),
+		",title=", title,
+		",version=", version,
+		",revision=", revision,
+		",created=", created,
+		"} 1\n")
 	metriks := metrics.NewSet()
 	return router.New(title, version,
 		func(_ http.ResponseWriter, _ *http.Request) {},
