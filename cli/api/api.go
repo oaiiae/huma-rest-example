@@ -105,8 +105,8 @@ func (key ctxlog) loggerMiddleware(parent *slog.Logger) func(huma.Context, func(
 	}
 }
 
-// recoverMiddleware returns a middleware that recovers and logs the value from panic.
-// Also sets status response to [http.StatusInternalServerError].
+// recoverMiddleware returns a middleware that recovers and logs the value from panic
+// to finally set the response status to [http.StatusInternalServerError].
 func (key ctxlog) recoverMiddleware(fallback *slog.Logger) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		defer func() {
