@@ -157,7 +157,6 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 	}
 
 	refs := sync.Map{}
-	refsMu := sync.Mutex{}
 	buckets := metrics.ExponentialBuckets(1e-3, 5, 6) //nolint: mnd // arbitrary
 
 	return func(ctx huma.Context, next func(huma.Context)) {
@@ -167,17 +166,11 @@ func meterRequests(set *metrics.Set) func(huma.Context, func(huma.Context)) {
 		uid := op.OperationID + http.StatusText(ctx.Status())
 		val, ok := refs.Load(uid)
 		if !ok {
-			refsMu.Lock()
-			val, ok = refs.Load(uid)
-			if !ok {
-				labels := joinQuote("{method=", op.Method, ",path=", op.Path, ",status=", strconv.Itoa(ctx.Status()), "}") //nolint: golines
-				val = ref{
-					set.NewCounter("http_requests_total" + labels),
-					set.NewPrometheusHistogramExt("http_request_duration_seconds"+labels, buckets),
-				}
-				refs.Store(uid, val)
-			}
-			refsMu.Unlock()
+			labels := joinQuote("{method=", op.Method, ",path=", op.Path, ",status=", strconv.Itoa(ctx.Status()), "}") //nolint: golines
+			val, _ = refs.LoadOrStore(uid, ref{
+				set.GetOrCreateCounter("http_requests_total" + labels),
+				set.GetOrCreatePrometheusHistogramExt("http_request_duration_seconds"+labels, buckets),
+			})
 		}
 		valref := val.(ref) //nolint: errcheck // always true
 		valref.Counter.Inc()
