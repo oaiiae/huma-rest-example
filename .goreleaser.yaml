@@ -7,12 +7,12 @@ builds:
       - linux
       - darwin
       - windows
-    ldflags:
+    ldflags: # reproducible builds
       - -s -w
       - -X main.title={{ .ProjectName }}
       - -X main.version={{ .Version }}
-      - -X main.revision={{ .FullCommit }}
-      - -X main.created={{ .Date }}
+      - -X main.revision={{ .ShortCommit }}
+      - -X main.created={{ .CommitDate }}
 
 archives:
   - formats: [tar.gz]
