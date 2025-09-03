@@ -1,0 +1,19 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": ["config:recommended", "schedule:nonOfficeHours"],
+    "postUpdateOptions": ["gomodTidy"],
+    "enabledManagers": ["gomod"],
+    "packageRules": [
+        {
+            "matchUpdateTypes": ["major"],
+            "enabled": false
+        },
+        {
+            "matchManagers": ["gomod"],
+            "matchDepTypes": ["indirect"],
+            "enabled": true,
+            "groupName": "go.mod (indirect dependencies)",
+            "groupSlug": "gomod-indirect"
+        }
+    ]
+}
