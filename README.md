@@ -8,9 +8,20 @@ This is a toy project for me to test and explore. Most of the value here is not 
 - Documentation is embedded with the code making required changes obvious
 - Makes use of generics to use idiomatic functions as HTTP handlers.
   ```go
-  func Handle[I, O any](context.Context, I) (O, error) { ... }
+  func Handle[I, O any](context.Context, *I) (*O, error) { ... }
   ```
 - Handles errors and marshalling consistently
+
+## Logging
+
+The server is configured with some basic logging features:
+- structured logging with `log/slog`
+- access logs inspired by the [Common Log Format]
+- panic recovery & logging
+- API error logs
+- X-Request-ID for basic correlation
+
+[Common Log Format]: https://en.wikipedia.org/wiki/Common_Log_Format
 
 ## Metrics
 
@@ -35,8 +46,30 @@ There is basic github actions for triggering test and lint runs. The linter (gol
 
 ### Releasing
 
-Making use of Goreleaser to streamline the process. The configuration is pretty basic but it probably fits lots of real world use cases. It builds the project according to a OS / Arch matrix, build a docker image, pushes it to a registry & creates a changelog.
+Making use of Goreleaser to streamline the process. The configuration is pretty basic but it probably fits a good amount of real world use cases.
+
+It builds the project according to an OS / architecture matrix, builds a docker image, pushes it to a registry & creates a changelog.
 
 ### Updating
 
-Basic Renovate configuration, making use of the Mend-hosted bot.
+Basic Renovate configuration, making use of the Mend-hosted bot. It is set to update all Go modules.
+
+### Deploying
+
+Configuration deployment to run on Kubernetes.
+
+## Devcontainers
+
+The project embeds its development environment through Development Containers.
+
+## Project structure
+
+```
+.
+|-- cli            Command-line facing objects & their options
+|-- datastores     Implementations of storage interfaces
+|-- deployments    Deployment configurations
+|-- dist           For Goreleaser to use
+|-- handlers       HTTP handlers & registration
+`-- router         Application agnostic routing helpers
+```
