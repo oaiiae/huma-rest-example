@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: huma-rest-example-config
+data:
+  SERVICE_LOGGER_FORMAT: "json"
+  SERVICE_PORT: "8080"
